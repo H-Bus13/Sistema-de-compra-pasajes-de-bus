@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Gestión de Flota - Buses Interurbanos{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <h3 class="fw-bold text-white mb-0">
+            <i class="bi bi-bus-front me-2 text-warning"></i>Gestión de Flota y Programación de Viajes
+        </h3>
+        
+        <!-- BOTONES DE ACCIÓN PRINCIPALES -->
+        <div class="d-flex gap-2">
+            <button class="btn btn-warning fw-bold text-dark" data-bs-toggle="modal" data-bs-target="#modalAgregarServicio" onclick="if(typeof establecerFechasMinimas==='function') establecerFechasMinimas();">
+                <i class="bi bi-calendar-plus me-1"></i> Programar Viaje (Asociar Bus a Ruta)
+            </button>
+            <button class="btn btn-outline-warning fw-bold" data-bs-toggle="modal" data-bs-target="#modalAgregarBus">
+                <i class="bi bi-plus-circle me-1"></i> Agregar Bus
+            </button>
+            <button class="btn btn-info fw-bold text-dark" data-bs-toggle="modal" data-bs-target="#modalGestionarRutas">
+                <i class="bi bi-geo-alt-fill me-1"></i> Crear Ruta
+            </button>
+        </div>
+    </div>
+
+    <!-- TABLA DE VIAJES ASOCIADOS Y PROGRAMADOS -->
+    <div class="card bg-slate-800 text-white border-secondary p-3 shadow mb-4">
+        <h5 class="fw-bold text-warning mb-3"><i class="bi bi-clock-history me-2"></i>Viajes Programados (Publicados para Clientes)</h5>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Ruta</th>
+                        <th>Bus Asignado</th>
+                        <th>Fecha/Hora Salida</th>
+                        <th>Precio Base</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyServicios">
+                    <!-- Cargado por JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TABLA DE BUSES REGISTRADOS -->
+    <div class="card bg-slate-800 text-white border-secondary p-3 shadow">
+        <h5 class="fw-bold text-light mb-3"><i class="bi bi-bus-front-fill me-2"></i>Estado de Máquinas y Flota</h5>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0" id="tablaBuses">
+                <thead>
+                    <tr>
+                        <th># Máquina</th>
+                        <th>Patente</th>
+                        <th>Capacidad</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyBuses">
+                    <!-- Los datos se cargan dinámicamente mediante JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PARA ASOCIAR BUS Y RUTA (CREAR SERVICIO) -->
+<div class="modal fade" id="modalAgregarServicio" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-warning"><i class="bi bi-calendar-plus me-2"></i>Programar Nuevo Viaje</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formAgregarServicio">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Ruta del Trayecto</label>
+                            <select id="selectRutaServicio" class="form-select bg-secondary text-white border-0" required>
+                                <option value="">Cargando rutas...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Bus Asignado</label>
+                            <select id="selectBusServicio" class="form-select bg-secondary text-white border-0" required>
+                                <option value="">Cargando buses activos...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Fecha y Hora de Salida</label>
+                            <input type="datetime-local" id="inputFechaSalida" class="form-control bg-secondary text-white border-0" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Fecha y Hora de Llegada</label>
+                            <input type="datetime-local" id="inputFechaLlegada" class="form-control bg-secondary text-white border-0" required>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label small fw-semibold">Precio Base ($ CLP)</label>
+                            <input type="number" id="inputPrecioBase" class="form-control bg-secondary text-white border-0" placeholder="Ej: 15000" min="0" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-light btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning btn-sm fw-bold px-3">Publicar Viaje</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PARA AGREGAR NUEVO BUS -->
+<div class="modal fade" id="modalAgregarBus" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-warning"><i class="bi bi-bus-front-fill me-2"></i>Registrar Nuevo Bus</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formAgregarBus">
+                <div class="modal-body">
+                    <div id="alertErrorBus" class="alert alert-danger d-none py-2 px-3 small mb-3"></div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Número de Máquina</label>
+                        <input type="number" id="inputNumeroBus" class="form-control bg-secondary text-white border-0" placeholder="Ej: 101" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Patente</label>
+                        <input type="text" id="inputPatente" class="form-control bg-secondary text-white border-0" placeholder="Ej: BBBB-11" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Capacidad de Asientos</label>
+                        <input type="number" id="inputCapacidad" class="form-control bg-secondary text-white border-0" value="40" min="1" max="60" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-light btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning btn-sm fw-bold px-3">Guardar Bus</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PARA GESTIONAR RUTAS -->
+<div class="modal fade" id="modalGestionarRutas" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-info"><i class="bi bi-geo-alt-fill me-2"></i>Crear Nueva Ruta</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formAgregarRuta">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Ciudad de Origen</label>
+                        <input type="text" id="inputOrigen" class="form-control bg-secondary text-white border-0" placeholder="Ej: Santiago" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Ciudad de Destino</label>
+                        <input type="text" id="inputDestino" class="form-control bg-secondary text-white border-0" placeholder="Ej: Temuco" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Duración Estimada (Horas)</label>
+                        <input type="number" step="0.5" id="inputDuracion" class="form-control bg-secondary text-white border-0" placeholder="Ej: 8" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-light btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-info btn-sm fw-bold px-3">Guardar Ruta</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/gestion_flota.js' %}"></script>
+{% endblock %}

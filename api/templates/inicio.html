@@ -1,0 +1,492 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Bussur - Compra tu pasaje online{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* SECCIÓN HERO ESTILO TURBUS */
+    .hero-section {
+        background: linear-gradient(to bottom, rgba(11, 19, 41, 0.4), rgba(11, 19, 41, 0.9)),
+                    url('https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=1920&auto=format&fit=crop') center/cover no-repeat;
+        padding: 80px 20px 120px 20px;
+        text-align: center;
+        position: relative;
+    }
+
+    .hero-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        text-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    }
+
+    /* COMPONENTE BUSCADOR SOBREPUESTO */
+    .search-card-wrapper {
+        max-width: 1100px;
+        margin: -60px auto 40px auto;
+        position: relative;
+        z-index: 10;
+        padding: 0 15px;
+    }
+
+    .tabs-turbus {
+        display: inline-flex;
+        background-color: #1e293b;
+        border-radius: 12px 12px 0 0;
+        overflow: hidden;
+    }
+
+    .tabs-turbus .nav-link {
+        color: #94a3b8;
+        padding: 12px 24px;
+        font-weight: 600;
+        border: none;
+        border-radius: 0;
+    }
+
+    .tabs-turbus .nav-link.active {
+        background-color: #a3e635;
+        color: #0f172a;
+    }
+
+    .search-body {
+        background-color: #ffffff;
+        color: #0f172a;
+        border-radius: 0 16px 16px 16px;
+        padding: 24px;
+        box-shadow: 0 20px 30px rgba(0,0,0,0.3);
+    }
+
+    /* BUS EN HORIZONTAL CON HASTA 40 ASIENTOS */
+    .bus-container-scroll {
+        overflow-x: auto;
+        padding: 20px 10px;
+    }
+
+    .bus-chassis {
+        background-color: #f1f5f9;
+        border: 4px solid #475569;
+        border-radius: 40px 16px 16px 40px;
+        padding: 20px 25px;
+        min-width: 950px;
+        display: flex;
+        align-items: center;
+    }
+
+    .bus-cabina {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 170px;
+        padding-right: 20px;
+        border-right: 3px dashed #cbd5e1;
+        margin-right: 20px;
+    }
+
+    .seat-driver {
+        width: 38px;
+        height: 38px;
+        background-color: #eab308;
+        color: #ffffff;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+
+    .bus-grid-pasajeros {
+        display: grid;
+        grid-template-rows: repeat(2, 38px) 24px repeat(2, 38px);
+        grid-auto-flow: column;
+        gap: 10px;
+        flex-grow: 1;
+    }
+
+    .asiento-btn {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        font-weight: bold;
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        transition: all 0.2s;
+        color: #ffffff;
+    }
+
+    .asiento-btn.disponible { background-color: #84cc16; cursor: pointer; }
+    .asiento-btn.disponible:hover { background-color: #65a30d; transform: translateY(-2px); }
+    .asiento-btn.reservado_temporal { background-color: #f97316; cursor: not-allowed; opacity: 0.9; }
+    .asiento-btn.ocupado { background-color: #2563eb; cursor: not-allowed; opacity: 0.85; }
+    .asiento-btn.seleccionado { background-color: #06b6d4 !important; box-shadow: 0 0 10px #22d3ee !important; transform: scale(1.1); }
+
+    .leyenda-dot { width: 18px; height: 18px; border-radius: 4px; display: inline-block; }
+    .bg-disponible { background-color: #84cc16; }
+    .bg-reservado { background-color: #f97316; }
+    .bg-ocupado { background-color: #2563eb; }
+    .bg-seleccionado { background-color: #06b6d4; }
+    .bg-chofer { background-color: #eab308; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- SECCIÓN CABECERA DE IMPACTO (TURBUS HERO) -->
+<section class="hero-section">
+    <div class="container py-4">
+        <h1 class="hero-title text-white">Compra tu pasaje online y viaja por Chile seguro</h1>
+        <p class="fs-5 text-light opacity-75">Rutas y horarios: Viaja con comodidad a todo el país</p>
+    </div>
+</section>
+
+<!-- CAJA DE BÚSQUEDA FLOTANTE ESTILO TURBUS -->
+<div class="search-card-wrapper">
+    <ul class="nav tabs-turbus">
+        <li class="nav-item">
+            <a class="nav-link active" href="#"><i class="bi bi-ticket-perforated me-2"></i>Compra tu pasaje</a>
+        </li>
+    </ul>
+    
+    <div class="search-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label text-muted small fw-bold">Origen</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-geo-alt text-secondary"></i></span>
+                    <input type="text" id="filtroOrigen" class="form-control border-start-0" placeholder="Ingresa tu origen (Ej: Temuco)">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small fw-bold">Destino</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-pin-map text-secondary"></i></span>
+                    <input type="text" id="filtroDestino" class="form-control border-start-0" placeholder="Ingresa tu destino (Ej: Santiago)">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small fw-bold">Fecha de ida</label>
+                <input type="date" id="filtroFecha" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <button onclick="buscarServicios()" class="btn btn-warning w-100 fw-bold py-2 text-dark shadow-sm">
+                    <i class="bi bi-search me-1"></i> BUSCAR
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CONTENEDOR DE RESULTADOS DE BÚSQUEDA -->
+<div class="container my-5">
+    <h4 class="fw-bold text-white mb-4"><i class="bi bi-bus-front me-2 text-warning"></i>Itinerarios Disponibles</h4>
+    
+    <div id="contenedorServicios" class="row g-4">
+        <div class="col-12 text-center text-secondary py-5">
+            <div class="spinner-border text-warning" role="status"></div>
+            <p class="mt-2">Cargando salidas y viajes disponibles...</p>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CON CROQUIS COMPLETO DE ASIENTOS -->
+<div class="modal fade" id="modalMapaBus" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-warning" id="tituloModalServicio">Selección de Asientos</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                
+                <!-- LEYENDA TIPO REFERENCIA -->
+                <div class="d-flex justify-content-center align-items-center gap-4 mb-4 p-2 bg-slate-900 rounded border border-secondary small flex-wrap">
+                    <div class="d-flex align-items-center gap-2"><span class="leyenda-dot bg-seleccionado"></span> SELECCIONADO</div>
+                    <div class="d-flex align-items-center gap-2"><span class="leyenda-dot bg-disponible"></span> DISPONIBLE</div>
+                    <div class="d-flex align-items-center gap-2"><span class="leyenda-dot bg-reservado"></span> EN PROCESO</div>
+                    <div class="d-flex align-items-center gap-2"><span class="leyenda-dot bg-ocupado"></span> OCUPADO</div>
+                    <div class="d-flex align-items-center gap-2 border-start border-secondary ps-3"><span class="leyenda-dot bg-chofer"></span> CHOFER</div>
+                </div>
+
+                <!-- AUTOBÚS DIBUJADO -->
+                <div class="bus-container-scroll">
+                    <div class="bus-chassis">
+                        <div class="bus-cabina">
+                            <div class="seat-driver" title="Conductor"><i class="bi bi-disc"></i></div>
+                            <div class="seat-driver" title="Auxiliar"><i class="bi bi-person-badge"></i></div>
+                        </div>
+                        <div id="gridAsientosBus" class="bus-grid-pasajeros"></div>
+                    </div>
+                </div>
+
+                <!-- RESUMEN MULTISELECCIÓN -->
+                <div id="infoAsientoSeleccionado" class="mt-3 p-3 bg-slate-800 rounded d-none border border-secondary">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-info fw-bold mb-1" id="textoAsientosLista">Asientos: --</h6>
+                            <p class="text-secondary small mb-0">Cantidad: <span id="cantAsientos" class="text-white fw-bold">0</span> pasaje(s)</p>
+                        </div>
+                        <div class="text-end">
+                            <span class="text-secondary small d-block">Monto Total:</span>
+                            <span class="fs-4 fw-bold text-success" id="textoAsientoPrecio">$0</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cerrar</button>
+                <button id="btnProcesarSeleccion" onclick="procesarContinuarCompra()" class="btn btn-warning fw-bold text-dark" disabled>
+                    <i class="bi bi-arrow-right-circle me-1"></i>Continuar con la Compra
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- INCLUIMOS LOS MODALES DE COMPRA Y LOGIN DENTRO DEL BLOQUE CONTENT -->
+{% include 'modal_compra.html' %}
+{% include 'modal_login.html' %}
+{% include 'modal_registro.html' %}
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- IMPORTACIÓN DE SCRIPTS DESDE STATIC -->
+<script src="/static/js/compra_invitado.js?v=1.1"></script>
+<script src="/static/js/login_pasajero.js?v=1.0"></script>
+<script src="/static/js/registro_pasajero.js?v=1.0"></script>
+
+<script>
+    let asientosSeleccionados = [];
+    let modalBusInstance = null;
+    let servicioActualId = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        modalBusInstance = new bootstrap.Modal(document.getElementById('modalMapaBus'));
+        buscarServicios();
+    });
+
+    async function buscarServicios() {
+        const origen = document.getElementById('filtroOrigen').value.trim();
+        const destino = document.getElementById('filtroDestino').value.trim();
+        const contenedor = document.getElementById('contenedorServicios');
+
+        let url = '/api/servicios/buscar/?';
+        if (origen) url += `ruta__origen__icontains=${origen}&`;
+        if (destino) url += `ruta__destino__icontains=${destino}&`;
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            contenedor.innerHTML = '';
+
+            if (!data || data.length === 0) {
+                contenedor.innerHTML = `<div class="col-12 text-center text-muted py-5"><i class="bi bi-emoji-frown fs-2 d-block mb-2"></i>No se encontraron itinerarios coincidentes.</div>`;
+                return;
+            }
+
+            data.forEach(servicio => {
+                const fSalida = new Date(servicio.fecha_hora_salida).toLocaleString('es-CL', { dateStyle: 'medium', timeStyle: 'short' });
+                const fLlegada = new Date(servicio.fecha_hora_llegada).toLocaleString('es-CL', { timeStyle: 'short' });
+                const precio = parseInt(servicio.precio_base).toLocaleString('es-CL');
+
+                const origenNombre = servicio.ruta_detalle?.origen_detalle?.ciudad || servicio.ruta_detalle?.origen || 'Origen';
+                const destinoNombre = servicio.ruta_detalle?.destino_detalle?.ciudad || servicio.ruta_detalle?.destino || 'Destino';
+                const patente = servicio.bus_detalle?.patente || 'N/A';
+                const numeroBus = servicio.bus_detalle?.numero_bus || '';
+
+                contenedor.innerHTML += `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card bg-slate-800 text-white border-secondary h-100 p-3 shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-warning text-dark font-monospace">Bus #${numeroBus} (${patente})</span>
+                                <span class="text-success fw-bold fs-4">$${precio}</span>
+                            </div>
+                            <h5 class="fw-bold mb-1">${origenNombre} ➔ ${destinoNombre}</h5>
+                            <p class="text-secondary small mb-3"><i class="bi bi-geo-alt me-1"></i>Servicio directo</p>
+                            
+                            <div class="bg-dark p-2 rounded mb-3 small border border-secondary">
+                                <div class="d-flex justify-content-between"><span>Salida:</span><strong>${fSalida}</strong></div>
+                                <div class="d-flex justify-content-between mt-1"><span>Llegada:</span><strong>${fLlegada}</strong></div>
+                            </div>
+                            
+                            <button onclick="verMapaAsientos(${servicio.id}, '${origenNombre}', '${destinoNombre}', ${servicio.precio_base})" class="btn btn-outline-warning w-100 fw-bold mt-auto">
+                                Ver Croquis / Seleccionar
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        } catch (e) {
+            contenedor.innerHTML = `<div class="col-12 text-center text-danger py-4">Error al consultar itinerarios.</div>`;
+        }
+    }
+
+    async function verMapaAsientos(servicioId, origen, destino, precioBase) {
+        servicioActualId = servicioId;
+        document.getElementById('tituloModalServicio').innerText = `Croquis de Bus: ${origen} ➔ ${destino}`;
+        const grid = document.getElementById('gridAsientosBus');
+        grid.innerHTML = '<div class="text-center text-muted w-100 py-3"><div class="spinner-border text-warning"></div> Cargando croquis del bus...</div>';
+        
+        asientosSeleccionados = [];
+        actualizarResumenSeleccion();
+        modalBusInstance.show();
+
+        try {
+            const response = await fetch(`/api/servicios/${servicioId}/asientos/`);
+            const asientosBackend = await response.json();
+
+            const mapaCompleto = [];
+            for (let num = 1; num <= 40; num++) {
+                const encontrado = asientosBackend.find(a => a.numero_asiento === num);
+                if (encontrado) {
+                    mapaCompleto.push(encontrado);
+                } else {
+                    mapaCompleto.push({
+                        id: `virtual-${num}`,
+                        numero_asiento: num,
+                        estado: 'DISPONIBLE',
+                        tarifa: precioBase
+                    });
+                }
+            }
+
+            grid.innerHTML = '';
+            for (let i = 0; i < mapaCompleto.length; i += 4) {
+                const col = mapaCompleto.slice(i, i + 4);
+                if (col[0]) agregarBotonAsiento(grid, col[0], 1);
+                if (col[1]) agregarBotonAsiento(grid, col[1], 2);
+                
+                const pasillo = document.createElement('div');
+                pasillo.style.gridRow = '3';
+                grid.appendChild(pasillo);
+
+                if (col[2]) agregarBotonAsiento(grid, col[2], 4);
+                if (col[3]) agregarBotonAsiento(grid, col[3], 5);
+            }
+
+            actualizarResumenSeleccion();
+
+        } catch (e) {
+            grid.innerHTML = `<div class="text-center text-danger w-100">Error al cargar el croquis del autobús.</div>`;
+        }
+    }
+
+    function agregarBotonAsiento(contenedor, asiento, filaGrid) {
+        const esOcupado = asiento.estado === 'OCUPADO';
+        const esReservado = asiento.estado === 'RESERVADO_TEMPORAL';
+        
+        const miSessionId = localStorage.getItem('session_id');
+        const esMiReserva = esReservado && (asiento.session_id === miSessionId);
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        
+        let estadoClase = 'disponible';
+        if (esOcupado) {
+            estadoClase = 'ocupado';
+        } else if (esReservado) {
+            estadoClase = esMiReserva ? 'seleccionado' : 'reservado_temporal';
+        }
+
+        btn.className = `asiento-btn ${estadoClase}`;
+        btn.style.gridRow = filaGrid;
+        btn.innerText = asiento.numero_asiento;
+
+        if (esMiReserva) {
+            btn.disabled = false;
+            const yaEnLista = asientosSeleccionados.some(a => a.id === asiento.id);
+            if (!yaEnLista) {
+                asientosSeleccionados.push(asiento);
+            }
+            btn.onclick = () => alternarSeleccionAsiento(btn, asiento);
+        } else if (esOcupado || esReservado) {
+            btn.disabled = true;
+            btn.title = esOcupado ? 'Asiento Ocupado' : 'En proceso de compra por otro usuario';
+        } else {
+            btn.disabled = false;
+            btn.onclick = () => alternarSeleccionAsiento(btn, asiento);
+        }
+
+        contenedor.appendChild(btn);
+    }
+
+    async function liberarAsientoBackend(asientoId) {
+        const miSessionId = localStorage.getItem('session_id');
+        if (!miSessionId || (typeof asientoId === 'string' && asientoId.startsWith('virtual-'))) return;
+
+        try {
+            await fetch('/api/asientos/liberar/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: miSessionId,
+                    asiento_id: asientoId
+                })
+            });
+        } catch (e) {
+            console.error("Error al notificar liberación al servidor:", e);
+        }
+    }
+
+    async function alternarSeleccionAsiento(btn, asiento) {
+        const idx = asientosSeleccionados.findIndex(a => a.numero_asiento === asiento.numero_asiento);
+        
+        if (idx > -1) {
+            asientosSeleccionados.splice(idx, 1);
+            btn.classList.remove('seleccionado');
+            btn.classList.add('disponible');
+
+            if (asiento.estado === 'RESERVADO_TEMPORAL') {
+                await liberarAsientoBackend(asiento.id);
+                asiento.estado = 'DISPONIBLE';
+                asiento.session_id = null;
+            }
+        } else {
+            asientosSeleccionados.push(asiento);
+            btn.classList.add('seleccionado');
+            btn.classList.remove('disponible');
+        }
+        
+        actualizarResumenSeleccion();
+    }
+
+    function actualizarResumenSeleccion() {
+        const infoBox = document.getElementById('infoAsientoSeleccionado');
+        const btnProcesar = document.getElementById('btnProcesarSeleccion');
+
+        if (asientosSeleccionados.length === 0) {
+            infoBox.classList.add('d-none');
+            btnProcesar.disabled = true;
+            return;
+        }
+
+        infoBox.classList.remove('d-none');
+        btnProcesar.disabled = false;
+
+        asientosSeleccionados.sort((a, b) => a.numero_asiento - b.numero_asiento);
+        const numeros = asientosSeleccionados.map(a => `N° ${a.numero_asiento}`).join(', ');
+        const total = asientosSeleccionados.reduce((sum, a) => sum + parseFloat(a.tarifa), 0);
+
+        document.getElementById('textoAsientosLista').innerText = `Asientos Seleccionados: ${numeros}`;
+        document.getElementById('cantAsientos').innerText = asientosSeleccionados.length;
+        document.getElementById('textoAsientoPrecio').innerText = `$${parseInt(total).toLocaleString('es-CL')}`;
+    }
+
+    function procesarContinuarCompra() {
+        if (asientosSeleccionados.length === 0) return;
+
+        modalBusInstance.hide();
+
+        const ids = asientosSeleccionados.map(a => a.id);
+
+        if (typeof bloquearAsientosYSeguir === 'function') {
+            bloquearAsientosYSeguir(ids, servicioActualId); 
+        } else {
+            alert("Error: No se encontró el script de gestión de compra (compra_invitado.js).");
+        }
+    }
+</script>
+{% endblock %}

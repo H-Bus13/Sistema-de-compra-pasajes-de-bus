@@ -1,0 +1,60 @@
+<!-- MODAL DE REGISTRO DE PASAJERO -->
+<div class="modal fade" id="modalRegistroPasajero" tabindex="-1" aria-labelledby="modalRegistroLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white border-secondary shadow-lg">
+            
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-warning" id="modalRegistroLabel">
+                    <i class="bi bi-person-plus-fill me-2"></i>Crear Cuenta de Pasajero
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                <form id="formRegistroPasajero">
+                    {% csrf_token %}
+                    
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label for="regNombre" class="form-label small text-secondary">Nombre</label>
+                            <input type="text" class="form-control bg-slate-800 text-white border-secondary" id="regNombre" placeholder="Juan" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="regApellido" class="form-label small text-secondary">Apellido</label>
+                            <input type="text" class="form-control bg-slate-800 text-white border-secondary" id="regApellido" placeholder="Pérez" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="regRut" class="form-label small text-secondary">RUT</label>
+                        <input type="text" class="form-control bg-slate-800 text-white border-secondary" id="regRut" placeholder="12345678-9" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="regEmail" class="form-label small text-secondary">Correo Electrónico</label>
+                        <input type="email" class="form-control bg-slate-800 text-white border-secondary" id="regEmail" placeholder="correo@ejemplo.com" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="regPassword" class="form-label small text-secondary">Contraseña</label>
+                        <input type="password" class="form-control bg-slate-800 text-white border-secondary" id="regPassword" placeholder="••••••••" required>
+                    </div>
+
+                    <div id="mensajeErrorRegistro" class="alert alert-danger d-none py-2 small" role="alert"></div>
+                    <div id="mensajeExitoRegistro" class="alert alert-success d-none py-2 small" role="alert"></div>
+
+                    <button type="submit" class="btn btn-warning text-dark fw-bold w-100 mt-2 py-2">
+                        Registrarme
+                    </button>
+                </form>
+            </div>
+
+            <div class="modal-footer border-secondary justify-content-center">
+                <span class="small text-secondary">¿Ya tienes una cuenta? 
+                    <a href="#" class="text-warning text-decoration-none fw-bold" data-bs-toggle="modal" data-bs-target="#modalLogin" data-bs-dismiss="modal">Inicia Sesión aquí</a>
+                </span>
+            </div>
+
+        </div>
+    </div>
+</div>

@@ -1,0 +1,31 @@
+<!-- MODAL INICIAR SESIÓN PASAJERO -->
+<div class="modal fade" id="modalLoginPasajero" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-warning"><i class="bi bi-person-circle me-2"></i>Iniciar Sesión</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formLoginPasajero">
+                <div class="modal-body">
+                    <div id="alertLoginError" class="alert alert-danger d-none small py-2"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label small text-secondary">Correo Electrónico o RUT</label>
+                        <input type="text" id="loginCorreo" class="form-control bg-slate-800 text-white border-secondary" required placeholder="ejemplo@correo.cl o 19876543-2">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-secondary">Contraseña</label>
+                        <input type="password" id="loginPassword" class="form-control bg-slate-800 text-white border-secondary" required placeholder="••••••••">
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-light btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" id="btnLoginSubmit" class="btn btn-warning fw-bold text-dark">
+                        Ingresar <i class="bi bi-box-arrow-in-right ms-1"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

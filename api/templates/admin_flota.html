@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Bussur - Administrador de Flota{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-white"><i class="bi bi-speedometer2 text-warning me-2"></i>Gestión de Flota y Recorridos</h2>
+        <a href="/" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver al Inicio</a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Tarjeta de Gestión de Buses -->
+        <div class="col-md-6">
+            <div class="card bg-dark text-white border-secondary p-4 h-100 shadow">
+                <h4 class="fw-bold text-warning mb-3"><i class="bi bi-bus-front me-2"></i>Autobuses Registrados</h4>
+                <p class="text-secondary small">Administra la flota registrada, patentes, capacidad de asientos y estado.</p>
+                <button class="btn btn-warning fw-bold mt-auto"><i class="bi bi-plus-circle me-1"></i>Agregar Nuevo Bus</button>
+            </div>
+        </div>
+
+        <!-- Tarjeta de Gestión de Recorridos -->
+        <div class="col-md-6">
+            <div class="card bg-dark text-white border-secondary p-4 h-100 shadow">
+                <h4 class="fw-bold text-warning mb-3"><i class="bi bi-map me-2"></i>Rutas y Horarios</h4>
+                <p class="text-secondary small">Configura las salidas, destinos, horarios de viaje y tarifas base.</p>
+                <button class="btn btn-outline-warning fw-bold mt-auto"><i class="bi bi-geo-alt me-1"></i>Gestionar Rutas</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

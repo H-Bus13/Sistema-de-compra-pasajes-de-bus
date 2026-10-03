@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Busur - Centro de Ayuda y Contacto{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ayuda-container {
+        padding-top: 40px;
+        padding-bottom: 60px;
+    }
+
+    .info-card {
+        background-color: transparent;
+        color: #e2e8f0;
+    }
+
+    .form-ayuda-card {
+        background-color: #0f172a;
+        border: 1px solid #1e293b;
+        border-radius: 16px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    }
+
+    .tabs-ayuda .nav-link {
+        color: #94a3b8;
+        font-weight: 600;
+        border: none;
+        background-color: transparent;
+    }
+
+    .tabs-ayuda .nav-link.active {
+        color: #0f172a;
+        background-color: #a3e635;
+        border-radius: 8px;
+    }
+
+    .form-ayuda .form-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #cbd5e1;
+        margin-bottom: 4px;
+    }
+
+    .form-ayuda .form-control, 
+    .form-ayuda .form-select {
+        background-color: #1e293b;
+        border: 1px solid #334155;
+        color: #f8fafc;
+        border-radius: 8px;
+    }
+
+    .form-ayuda .form-control:focus, 
+    .form-ayuda .form-select:focus {
+        background-color: #1e293b;
+        border-color: #a3e635;
+        color: #ffffff;
+        box-shadow: 0 0 0 0.25rem rgba(163, 230, 53, 0.25);
+    }
+
+    .icon-box {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background-color: #1e293b;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #a3e635;
+        font-size: 1.2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container ayuda-container">
+    
+    <!-- SUBTÍTULO / PROPÓSITO -->
+    <div class="text-center mb-5">
+        <p class="text-secondary">Este formulario tiene como objetivo ser un <strong>canal de comunicación efectivo con nuestros clientes</strong> y ayudarnos a <strong>mejorar nuestro servicio</strong>.</p>
+    </div>
+
+    <div class="row g-5">
+        
+        <!-- COLUMNA IZQUIERDA: INFORMACIÓN Y CONTACTO -->
+        <div class="col-lg-5">
+            <div class="info-card pe-lg-4">
+                <p class="lh-lg mb-4 text-slate-300">
+                    Haznos llegar una <strong>Sugerencia, Felicitaciones o Reclamo</strong> a través de este formulario. Asegúrate de ingresar correctamente tus datos personales y antecedentes de viaje para dar respuesta a tu requerimiento.
+                </p>
+                
+                <p class="small text-secondary mb-4">
+                    Nuestros ejecutivos evaluarán tu caso y entregaremos una respuesta a la brevedad posible.
+                </p>
+
+                <h6 class="fw-bold text-white mb-3">En caso de dudas o consulta, contáctanos:</h6>
+
+                <!-- HORARIOS -->
+                <div class="d-flex align-items-start gap-3 mb-4">
+                    <div class="icon-box flex-shrink-0">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-1 text-white">Horarios de atención en redes sociales</h6>
+                        <p class="small text-secondary mb-0">Lunes a sábados : de 8:00 a 20:00 horas.</p>
+                        <p class="small text-secondary mb-0">Domingos y Festivos : de 9:00 a 18:00 horas.</p>
+                    </div>
+                </div>
+
+                <!-- WHATSAPP -->
+                <div class="d-flex align-items-start gap-3">
+                    <div class="icon-box flex-shrink-0">
+                        <i class="bi bi-whatsapp"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-1 text-white">WhatsApp</h6>
+                        <p class="small text-success fw-bold mb-0">+56 9 4072 8931</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: FORMULARIO ESTILO TARJETA -->
+        <div class="col-lg-7">
+            <div class="form-ayuda-card p-4">
+                
+                <!-- PESTAÑAS (CONTACTÁNOS / CONSULTAR REQUERIMIENTO) -->
+                <ul class="nav nav-pills tabs-ayuda mb-4 gap-2" id="ayudaTab" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="contactanos-tab" data-bs-toggle="pill" data-bs-target="#contactanos-tab-pane" type="button">Contáctanos</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="consultar-tab" data-bs-toggle="pill" data-bs-target="#consultar-tab-pane" type="button">Consultar requerimiento</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="ayudaTabContent">
+                    
+                    <!-- TAB 1: FORMULARIO PRINCIPAL -->
+                    <div class="tab-pane fade show active" id="contactanos-tab-pane" role="tabpanel">
+                        <h5 class="text-center text-warning fw-bold mb-4">Contáctanos</h5>
+
+                        <form class="form-ayuda" method="POST" action="">
+                            {% csrf_token %}
+                            
+                            <!-- MI REQUERIMIENTO -->
+                            <div class="mb-3">
+                                <label class="form-label">Mi requerimiento</label>
+                                <select class="form-select" name="requerimiento" required>
+                                    <option value="" selected disabled>Selecciona tu requerimiento</option>
+                                    <option value="reclamo">Reclamo</option>
+                                    <option value="sugerencia">Sugerencia</option>
+                                    <option value="felicitacion">Felicitación</option>
+                                    <option value="consulta">Consulta General</option>
+                                </select>
+                            </div>
+
+                            <!-- TIPO DE SOLICITUD -->
+                            <div class="mb-3">
+                                <label class="form-label">Tipo de solicitud</label>
+                                <select class="form-select" name="tipo_solicitud" required>
+                                    <option value="" selected disabled>Selecciona tu tipo de solicitud</option>
+                                    <option value="servicio">Problema con el Servicio de Bus</option>
+                                    <option value="compra">Inconveniente con la Compra Online</option>
+                                    <option value="equipaje">Equipaje / Objeto Perdido</option>
+                                </select>
+                            </div>
+
+                            <!-- MOTIVO -->
+                            <div class="mb-3">
+                                <label class="form-label">Especifica el motivo de tu solicitud</label>
+                                <select class="form-select" name="motivo" required>
+                                    <option value="" selected disabled>Selecciona el motivo</option>
+                                    <option value="atraso">Atraso en la salida</option>
+                                    <option value="atencion">Atención del personal</option>
+                                    <option value="cobro">Doble cobro o cobro erróneo</option>
+                                    <option value="otro">Otro motivo</option>
+                                </select>
+                            </div>
+
+                            <!-- NOMBRE Y APELLIDO -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Nombre</label>
+                                    <input type="text" class="form-control" name="nombre" placeholder="Tu nombre" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Apellido</label>
+                                    <input type="text" class="form-control" name="apellido" placeholder="Tu apellido" required>
+                                </div>
+                            </div>
+
+                            <!-- RUT Y TELÉFONO -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">RUT</label>
+                                    <input type="text" class="form-control" name="rut" placeholder="12.345.678-K" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Teléfono</label>
+                                    <input type="tel" class="form-control" name="telefono" placeholder="9 0000 0000" required>
+                                </div>
+                            </div>
+
+                            <!-- CORREO ELECTRÓNICO -->
+                            <div class="mb-3">
+                                <label class="form-label">Correo electrónico</label>
+                                <input type="email" class="form-control" name="email" placeholder="ejemplo@correo.com" required>
+                            </div>
+
+                            <!-- N° TRANSACCIÓN Y N° BOLETO -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Número de transacción</label>
+                                    <input type="text" class="form-control" name="num_transaccion" placeholder="Opcional">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Número de boleto</label>
+                                    <input type="text" class="form-control" name="num_boleto" placeholder="boleto">
+                                </div>
+                            </div>
+
+                            <!-- COMENTARIO -->
+                            <div class="mb-3">
+                                <label class="form-label">Danos tu opinión</label>
+                                <textarea class="form-control" name="comentario" rows="4" placeholder="Ingresa tu comentario aquí..." required></textarea>
+                            </div>
+
+                            <!-- ADJUNTAR ARCHIVO -->
+                            <div class="mb-4">
+                                <label class="form-label">Documentación adicional</label>
+                                <p class="text-secondary small mb-2">Puedes adjuntar comprobantes de compra o pasajes. Máximo 1 MB.</p>
+                                <input class="form-control form-control-sm" type="file" name="adjunto">
+                            </div>
+
+                            <!-- BOTÓN ENVIAR -->
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-warning px-5 py-2 fw-bold text-dark rounded-pill">
+                                    ENVIAR
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- TAB 2: CONSULTAR ESTADO -->
+                    <div class="tab-pane fade" id="consultar-tab-pane" role="tabpanel">
+                        <h5 class="text-center text-info fw-bold mb-4">Consultar Estado de Requerimiento</h5>
+                        <div class="mb-3">
+                            <label class="form-label">Número de Ticket o Solicitud</label>
+                            <input type="text" class="form-control" placeholder="Ej: REQ-10492">
+                        </div>
+                        <button type="button" class="btn btn-outline-info w-100 fw-bold">Buscar Solicitud</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

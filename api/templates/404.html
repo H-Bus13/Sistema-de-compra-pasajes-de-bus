@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Página no encontrada - Bussur{% endblock %}
+
+{% block content %}
+<div class="container py-5 text-center my-auto">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card bg-dark text-white border-secondary p-4 p-md-5 shadow-lg rounded-4">
+                <div class="mb-3">
+                    <i class="bi bi-exclamation-triangle-fill text-warning display-1"></i>
+                </div>
+                <h1 class="display-4 fw-bold text-white mb-2">404</h1>
+                <h4 class="fw-semibold text-light mb-3">¡Página no encontrada!</h4>
+                <p class="text-secondary mb-4">
+                    La ruta a la que intentas acceder no existe, fue movida o escribiste mal la dirección URL.
+                </p>
+                <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                    <a href="/" class="btn btn-warning btn-lg fw-bold px-4 rounded-pill shadow-sm">
+                        <i class="bi bi-house-door-fill me-2"></i>Volver al Inicio
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+<!-- Modal Bootstrap para Formulario de Compra Invitado -->
+<div class="modal fade" id="modalCompraInvitado" tabindex="-1" aria-labelledby="modalCompraLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content text-dark">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalCompraLabel">Datos para la Compra de Pasajes</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="formCheckoutInvitado">
+        <div class="modal-body text-dark">
+          <h5 class="fw-bold mb-3">1. Datos del Comprador (Contacto)</h5>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label for="invitadoNombre" class="form-label">Nombre</label>
+              <input type="text" class="form-control" id="invitadoNombre" required>
+            </div>
+            <div class="col-md-6">
+              <label for="invitadoApellido" class="form-label">Apellido</label>
+              <input type="text" class="form-control" id="invitadoApellido" required>
+            </div>
+            <div class="col-md-6">
+              <label for="invitadoCorreo" class="form-label">Correo Electrónico</label>
+              <input type="email" class="form-control" id="invitadoCorreo" required placeholder="para enviar los boletos">
+            </div>
+            <div class="col-md-6">
+              <label for="invitadoTelefono" class="form-label">Teléfono</label>
+              <input type="tel" class="form-control" id="invitadoTelefono" required placeholder="+56912345678">
+            </div>
+          </div>
+
+          <h5 class="fw-bold mb-3">2. Datos de los Pasajeros</h5>
+          <div id="contenedorPasajeros">
+            <!-- Se completa automáticamente vía JavaScript -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success fw-bold">Confirmar y Pagar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
