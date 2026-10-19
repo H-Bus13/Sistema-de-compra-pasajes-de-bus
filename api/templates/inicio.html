@@ -253,10 +253,21 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- IMPORTACIÓN DE SCRIPTS DESDE STATIC -->
-<script src="/static/js/compra_invitado.js?v=1.1"></script>
-<script src="/static/js/login_pasajero.js?v=1.0"></script>
-<script src="/static/js/registro_pasajero.js?v=1.0"></script>
+<!-- Inicialización de compra y croquis de asientos -->
+<script>
+    window.usuarioPasajeroId = {% if request.user.is_authenticated and request.user.rol == 'PASAJERO' %}{{ request.user.id }}{% else %}null{% endif %};
+    const claveSessionCompra = window.usuarioPasajeroId
+        ? `session_id_usuario_${window.usuarioPasajeroId}`
+        : 'session_id';
+    window.sessionIdCompra = localStorage.getItem(claveSessionCompra);
+    if (!window.sessionIdCompra) {
+        window.sessionIdCompra = `compra_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
+        localStorage.setItem(claveSessionCompra, window.sessionIdCompra);
+    }
+</script>
+<script>
+    {% include 'compra_invitado.js' %}
+</script>
 
 <script>
     let asientosSeleccionados = [];
@@ -271,15 +282,23 @@
     async function buscarServicios() {
         const origen = document.getElementById('filtroOrigen').value.trim();
         const destino = document.getElementById('filtroDestino').value.trim();
+        const fecha = document.getElementById('filtroFecha').value;
         const contenedor = document.getElementById('contenedorServicios');
 
-        let url = '/api/servicios/buscar/?';
-        if (origen) url += `ruta__origen__icontains=${origen}&`;
-        if (destino) url += `ruta__destino__icontains=${destino}&`;
+        const parametros = new URLSearchParams();
+        if (origen) parametros.set('origen_ciudad', origen);
+        if (destino) parametros.set('destino_ciudad', destino);
+        if (fecha) parametros.set('fecha_salida', fecha);
+        const query = parametros.toString();
+        const url = `/api/servicios/buscar/${query ? `?${query}` : ''}`;
 
         try {
             const response = await fetch(url);
             const data = await response.json();
+            if (!response.ok) {
+                const detalle = data.detail || data.error || 'No se pudieron buscar los itinerarios.';
+                throw new Error(detalle);
+            }
             contenedor.innerHTML = '';
 
             if (!data || data.length === 0) {
@@ -320,12 +339,14 @@
                 `;
             });
         } catch (e) {
-            contenedor.innerHTML = `<div class="col-12 text-center text-danger py-4">Error al consultar itinerarios.</div>`;
+            console.error('Error al consultar itinerarios:', e);
+            contenedor.innerHTML = `<div class="col-12 text-center text-danger py-4">${e.message || 'Error al consultar itinerarios.'}</div>`;
         }
     }
 
     async function verMapaAsientos(servicioId, origen, destino, precioBase) {
         servicioActualId = servicioId;
+        window.servicioCompraActual = servicioId;
         document.getElementById('tituloModalServicio').innerText = `Croquis de Bus: ${origen} ➔ ${destino}`;
         const grid = document.getElementById('gridAsientosBus');
         grid.innerHTML = '<div class="text-center text-muted w-100 py-3"><div class="spinner-border text-warning"></div> Cargando croquis del bus...</div>';
@@ -336,21 +357,36 @@
 
         try {
             const response = await fetch(`/api/servicios/${servicioId}/asientos/`);
+            if (!response.ok) {
+                throw new Error(`No se pudieron consultar los asientos (HTTP ${response.status}).`);
+            }
             const asientosBackend = await response.json();
+            let itemsCarro = [];
+            if (window.usuarioPasajeroId) {
+                const responseCarro = await fetch('/api/carro-pasajes/');
+                if (!responseCarro.ok) {
+                    throw new Error('No se pudo consultar el carro del pasajero.');
+                }
+                const carro = await responseCarro.json();
+                itemsCarro = carro.items || [];
+            }
 
             const mapaCompleto = [];
             for (let num = 1; num <= 40; num++) {
                 const encontrado = asientosBackend.find(a => a.numero_asiento === num);
-                if (encontrado) {
-                    mapaCompleto.push(encontrado);
-                } else {
-                    mapaCompleto.push({
+                const asiento = encontrado || {
                         id: `virtual-${num}`,
                         numero_asiento: num,
                         estado: 'DISPONIBLE',
                         tarifa: precioBase
-                    });
-                }
+                    };
+                const itemCarro = itemsCarro.find(item =>
+                    (encontrado && item.asiento_servicio === encontrado.id) ||
+                    (item.asiento_detalle.servicio === servicioId &&
+                        item.asiento_detalle.numero_asiento === num)
+                );
+                if (itemCarro) asiento.item_carro_id = itemCarro.id;
+                mapaCompleto.push(asiento);
             }
 
             grid.innerHTML = '';
@@ -370,7 +406,8 @@
             actualizarResumenSeleccion();
 
         } catch (e) {
-            grid.innerHTML = `<div class="text-center text-danger w-100">Error al cargar el croquis del autobús.</div>`;
+            console.error('Error al cargar el croquis del autobús:', e);
+            grid.innerHTML = `<div class="text-center text-danger w-100">${e.message || 'Error al cargar el croquis del autobús.'}</div>`;
         }
     }
 
@@ -378,15 +415,18 @@
         const esOcupado = asiento.estado === 'OCUPADO';
         const esReservado = asiento.estado === 'RESERVADO_TEMPORAL';
         
-        const miSessionId = localStorage.getItem('session_id');
+        const miSessionId = window.sessionIdCompra;
         const esMiReserva = esReservado && (asiento.session_id === miSessionId);
+        const estaEnMiCarro = Boolean(usuarioPasajeroId && asiento.item_carro_id);
 
         const btn = document.createElement('button');
         btn.type = 'button';
         
         let estadoClase = 'disponible';
-        if (esOcupado) {
+        if (esOcupado && !estaEnMiCarro) {
             estadoClase = 'ocupado';
+        } else if (estaEnMiCarro || esMiReserva) {
+            estadoClase = 'seleccionado';
         } else if (esReservado) {
             estadoClase = esMiReserva ? 'seleccionado' : 'reservado_temporal';
         }
@@ -395,7 +435,7 @@
         btn.style.gridRow = filaGrid;
         btn.innerText = asiento.numero_asiento;
 
-        if (esMiReserva) {
+        if (estaEnMiCarro || esMiReserva) {
             btn.disabled = false;
             const yaEnLista = asientosSeleccionados.some(a => a.id === asiento.id);
             if (!yaEnLista) {
@@ -414,13 +454,16 @@
     }
 
     async function liberarAsientoBackend(asientoId) {
-        const miSessionId = localStorage.getItem('session_id');
+        const miSessionId = window.sessionIdCompra;
         if (!miSessionId || (typeof asientoId === 'string' && asientoId.startsWith('virtual-'))) return;
 
         try {
             await fetch('/api/asientos/liberar/', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
                 body: JSON.stringify({
                     session_id: miSessionId,
                     asiento_id: asientoId
@@ -433,11 +476,37 @@
 
     async function alternarSeleccionAsiento(btn, asiento) {
         const idx = asientosSeleccionados.findIndex(a => a.numero_asiento === asiento.numero_asiento);
+
+        if (
+            idx === -1 &&
+            (asiento.estado === 'OCUPADO' ||
+                (asiento.estado === 'RESERVADO_TEMPORAL' &&
+                    asiento.session_id !== window.sessionIdCompra))
+        ) {
+            return;
+        }
         
         if (idx > -1) {
             asientosSeleccionados.splice(idx, 1);
+            if (usuarioPasajeroId && asiento.item_carro_id) {
+                const respuesta = await fetch(`/api/carro-pasajes/?item_id=${asiento.item_carro_id}`, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+                if (!respuesta.ok) {
+                    asientosSeleccionados.push(asiento);
+                    alert('No se pudo quitar el asiento de tu carro.');
+                    actualizarResumenSeleccion();
+                    return;
+                }
+                asiento.item_carro_id = null;
+            }
             btn.classList.remove('seleccionado');
-            btn.classList.add('disponible');
+            btn.classList.add(asiento.estado === 'OCUPADO' ? 'ocupado' : 'disponible');
+            if (asiento.estado === 'OCUPADO') {
+                btn.disabled = true;
+                btn.onclick = null;
+            }
 
             if (asiento.estado === 'RESERVADO_TEMPORAL') {
                 await liberarAsientoBackend(asiento.id);
@@ -448,6 +517,72 @@
             asientosSeleccionados.push(asiento);
             btn.classList.add('seleccionado');
             btn.classList.remove('disponible');
+
+            if (usuarioPasajeroId) {
+                let asientoRealId = null;
+                try {
+                    const reserva = await fetch('/api/asientos/bloquear-temporal/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({
+                            asientos_ids: [asiento.id],
+                            session_id: window.sessionIdCompra,
+                            servicio_id: servicioActualId
+                        })
+                    });
+                    const datosReserva = await reserva.json();
+                    if (!reserva.ok) {
+                        throw new Error(datosReserva.error || 'No se pudo reservar el asiento.');
+                    }
+                    asientoRealId = datosReserva.asientos_ids[0];
+                    asiento.id = asientoRealId;
+
+                    const respuestaCarro = await fetch('/api/carro-pasajes/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({
+                            asiento_servicio: asientoRealId,
+                            session_id: window.sessionIdCompra
+                        })
+                    });
+                    const datosCarro = await respuestaCarro.json();
+                    if (!respuestaCarro.ok) {
+                        throw new Error(datosCarro.error || 'No se pudo guardar el asiento en tu carro.');
+                    }
+                    const itemCarro = (datosCarro.items || []).find(item =>
+                        item.asiento_servicio === asientoRealId
+                    );
+                    if (!itemCarro) {
+                        throw new Error('El asiento no apareció en tu carro después de guardarlo.');
+                    }
+                    asiento.item_carro_id = itemCarro.id;
+                    asiento.estado = 'DISPONIBLE';
+                    asiento.session_id = null;
+                    await liberarAsientoBackend(asientoRealId);
+                } catch (error) {
+                    asientosSeleccionados.splice(
+                        asientosSeleccionados.findIndex(item => item === asiento), 1
+                    );
+                    btn.classList.remove('seleccionado');
+                    btn.classList.add(
+                        asiento.estado === 'OCUPADO' ? 'ocupado' : 'disponible'
+                    );
+                    if (asiento.estado === 'OCUPADO') {
+                        btn.disabled = true;
+                        btn.onclick = null;
+                    }
+                    if (asientoRealId) await liberarAsientoBackend(asientoRealId);
+                    alert(error.message || 'No se pudo guardar el asiento en tu carro.');
+                    actualizarResumenSeleccion();
+                    return;
+                }
+            }
         }
         
         actualizarResumenSeleccion();
@@ -481,12 +616,9 @@
         modalBusInstance.hide();
 
         const ids = asientosSeleccionados.map(a => a.id);
+        window.servicioCompraActual = servicioActualId;
 
-        if (typeof bloquearAsientosYSeguir === 'function') {
-            bloquearAsientosYSeguir(ids, servicioActualId); 
-        } else {
-            alert("Error: No se encontró el script de gestión de compra (compra_invitado.js).");
-        }
+        bloquearAsientosYSeguir(ids, servicioActualId);
     }
 </script>
 {% endblock %}

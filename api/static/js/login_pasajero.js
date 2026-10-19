@@ -32,12 +32,18 @@ async function procesarLoginModal(event) {
     const rolInput = form.querySelector('select[name="rol"]');
 
     const emailValue = emailInput ? emailInput.value.trim() : '';
+    const rolSeleccionado = rolInput ? rolInput.value : 'PASAJERO';
+
+    if (rolSeleccionado === 'ADMIN_FLOTA') {
+        form.submit();
+        return;
+    }
 
     const payload = {
         correo: emailValue,
         username: emailValue,
         password: passwordInput ? passwordInput.value : '',
-        rol: rolInput ? rolInput.value : 'PASAJERO'
+        rol: rolSeleccionado
     };
 
     try {
@@ -56,13 +62,7 @@ async function procesarLoginModal(event) {
                 localStorage.setItem('usuario_logeado', JSON.stringify(data.usuario));
             }
             
-            // Si el rol devuelto o seleccionado es ADMIN_FLOTA, redirige al panel principal de flota
-            const rolUsuario = (data.usuario && data.usuario.rol) || (rolInput ? rolInput.value : '');
-            if (rolUsuario === 'ADMIN_FLOTA') {
-                window.location.href = '/panel/flota/';
-            } else {
-                window.location.reload();
-            }
+            window.location.reload();
             return;
         }
 

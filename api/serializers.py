@@ -184,6 +184,8 @@ class ServicioSerializer(serializers.ModelSerializer):
 # ---------------------------------------------------------------------------
 class ItemCarroSerializer(serializers.ModelSerializer):
     asiento_detalle = AsientoServicioSerializer(source='asiento_servicio', read_only=True)
+    nombre_ocupante = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    identificacion_ocupante = serializers.CharField(max_length=20, required=False, allow_blank=True)
 
     class Meta:
         model = ItemCarro

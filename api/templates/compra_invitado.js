@@ -1,9 +1,6 @@
-// 1. Identificador de sesión para el invitado
-let sessionId = localStorage.getItem('session_id');
-if (!sessionId) {
-    sessionId = 'invitado_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
-    localStorage.setItem('session_id', sessionId);
-}
+// 1. Identificador temporal separado por cuenta para no mezclar reservas locales.
+const usuarioPasajeroId = window.usuarioPasajeroId || null;
+const sessionId = window.sessionIdCompra;
 
 // Variables para almacenar selección actual
 let asientosSeleccionadosIds = [];
@@ -55,34 +52,38 @@ function validarRutChileno(rut) {
 
 // 2. Función para bloquear asientos temporalmente y abrir modal
 async function bloquearAsientosYSeguir(asientoIds, servicioId) {
-    let miSessionId = localStorage.getItem('session_id');
-    if (!miSessionId) {
-        miSessionId = 'sess_' + Math.random().toString(36).substring(2, 15);
-        localStorage.setItem('session_id', miSessionId);
-    }
+    const miSessionId = sessionId;
 
     try {
-        const res = await fetch('/api/asientos/bloquear-temporal/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                asientos_ids: asientoIds,
-                session_id: miSessionId,
-                servicio_id: servicioId || null
-            })
-        });
+        let idsReales = asientoIds;
+        if (!usuarioPasajeroId) {
+            const res = await fetch('/api/asientos/bloquear-temporal/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    asientos_ids: asientoIds,
+                    session_id: miSessionId,
+                    servicio_id: servicioId || null
+                })
+            });
 
-        const data = await res.json();
+            const data = await res.json();
 
-        if (!res.ok) {
-            alert(data.error || "No se pudieron bloquear los asientos seleccionados.");
-            return;
+            if (!res.ok) {
+                alert(data.error || "No se pudieron bloquear los asientos seleccionados.");
+                return;
+            }
+
+            idsReales = data.asientos_ids || asientoIds;
         }
 
-        const idsReales = data.asientos_ids || asientoIds;
         asientosSeleccionadosIds = idsReales;
 
         generarCamposPasajeros(idsReales);
+        configurarFormularioCompra();
 
         const modalFormEl = document.getElementById('modalCompraInvitado');
         if (modalFormEl) {
@@ -92,6 +93,106 @@ async function bloquearAsientosYSeguir(asientoIds, servicioId) {
     } catch (e) {
         console.error("Error al bloquear asientos:", e);
         alert("Ocurrió un error al procesar la reserva temporal.");
+    }
+}
+
+function configurarFormularioCompra() {
+    const datosComprador = document.getElementById('datosComprador');
+    const form = document.getElementById('formCheckoutInvitado');
+    if (datosComprador) {
+        datosComprador.classList.toggle('d-none', Boolean(usuarioPasajeroId));
+        datosComprador.querySelectorAll('input').forEach(input => {
+            input.required = !usuarioPasajeroId;
+        });
+    }
+    if (form) form.dataset.modoPasajero = usuarioPasajeroId ? 'autenticado' : 'invitado';
+}
+
+async function procesarCompraPasajero(form) {
+    const ocupantes = asientosSeleccionadosIds.map((asientoId, index) => {
+        const inputNombre = form[`nombre_ocupante_${asientoId}`];
+        const inputRut = form[`rut_ocupante_${asientoId}`];
+        return {
+            asientoId,
+            nombre: inputNombre ? inputNombre.value.trim() : '',
+            rut: inputRut ? inputRut.value.trim() : '',
+            index
+        };
+    });
+
+    for (const ocupante of ocupantes) {
+        if (!validarRutChileno(ocupante.rut)) {
+            alert(`El RUT "${ocupante.rut}" ingresado para el Pasajero ${ocupante.index + 1} no es válido. Por favor verifique el número y dígito verificador.`);
+            const inputRut = form[`rut_ocupante_${ocupante.asientoId}`];
+            if (inputRut) inputRut.focus();
+            return;
+        }
+    }
+
+    const csrfToken = getCookie('csrftoken');
+    try {
+        const reserva = await fetch('/api/asientos/bloquear-temporal/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                asientos_ids: ocupantes.map(item => item.asientoId),
+                session_id: sessionId,
+                servicio_id: window.servicioCompraActual
+            })
+        });
+        const datosReserva = await reserva.json();
+        if (!reserva.ok) {
+            alert(datosReserva.error || 'No se pudieron reservar los asientos seleccionados.');
+            return;
+        }
+
+        for (let index = 0; index < ocupantes.length; index++) {
+            const ocupante = ocupantes[index];
+            const respuestaCarro = await fetch('/api/carro-pasajes/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    asiento_servicio: datosReserva.asientos_ids[index],
+                    nombre_ocupante: ocupante.nombre,
+                    identificacion_ocupante: ocupante.rut,
+                    session_id: sessionId
+                })
+            });
+            const datosCarro = await respuestaCarro.json();
+            if (!respuestaCarro.ok) {
+                alert(datosCarro.error || 'No se pudo guardar la selección en tu carro.');
+                return;
+            }
+        }
+
+        const respuestaCheckout = await fetch('/api/ventas/checkout/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                session_id: sessionId,
+                asientos_ids: datosReserva.asientos_ids
+            })
+        });
+        const datosCheckout = await respuestaCheckout.json();
+        if (!respuestaCheckout.ok) {
+            alert(datosCheckout.error || 'No se pudo finalizar la compra.');
+            return;
+        }
+
+        alert(`¡Compra realizada con éxito!\nNúmero de Venta: #${datosCheckout.id}\nTotal pagado: $${datosCheckout.monto_total}`);
+        location.reload();
+    } catch (error) {
+        console.error('Error al procesar la compra del pasajero:', error);
+        alert('Ocurrió un error al procesar la compra. Inténtalo nuevamente.');
     }
 }
 
@@ -136,6 +237,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        if (form.dataset.modoPasajero === 'autenticado') {
+            await procesarCompraPasajero(form);
+            return;
+        }
+
         // --- VALIDACIÓN DE RUTS DE PASAJEROS ---
         const ocupantes = [];
         for (let i = 0; i < asientosSeleccionadosIds.length; i++) {
@@ -159,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        const miSessionId = localStorage.getItem('session_id') || sessionId;
+        const miSessionId = sessionId;
 
         const payload = {
             nombre: document.getElementById('invitadoNombre').value,

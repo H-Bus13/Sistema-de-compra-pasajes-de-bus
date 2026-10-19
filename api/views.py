@@ -95,6 +95,12 @@ class LoginPasajeroApiView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
+        if user.rol != Usuario.RolChoices.PASAJERO:
+            return Response(
+                {"error": "Esta cuenta no es de pasajero. Ingresa desde el acceso de administrador de flota."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         login(request, user)
 
         return Response({
@@ -154,21 +160,27 @@ class CarroPasajesView(APIView):
         
         if serializer.is_valid():
             asiento = serializer.validated_data['asiento_servicio']
+            session_id = request.data.get('session_id')
             
-            if asiento.estado == AsientoServicio.EstadoAsientoChoices.OCUPADO:
+            if asiento.esta_bloqueado_o_comprado(current_session_id=session_id):
                 return Response(
-                    {"error": "El asiento ya se encuentra ocupado por otro usuario."},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"error": "El asiento ya no se encuentra disponible."},
+                    status=status.HTTP_409_CONFLICT
                 )
 
-            if ItemCarro.objects.filter(carro=carro, asiento_servicio=asiento).exists():
-                return Response(
-                    {"error": "El asiento ya fue agregado previamente a tu carro."},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+            item, creado = ItemCarro.objects.update_or_create(
+                carro=carro,
+                asiento_servicio=asiento,
+                defaults={
+                    'nombre_ocupante': serializer.validated_data.get('nombre_ocupante', ''),
+                    'identificacion_ocupante': serializer.validated_data.get('identificacion_ocupante', ''),
+                }
+            )
 
-            serializer.save(carro=carro)
-            return Response(CarroPasajesSerializer(carro).data, status=status.HTTP_201_CREATED)
+            return Response(
+                CarroPasajesSerializer(carro).data,
+                status=status.HTTP_201_CREATED if creado else status.HTTP_200_OK
+            )
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -193,21 +205,52 @@ class CheckoutVentaView(APIView):
     @transaction.atomic
     def post(self, request):
         carro, _ = CarroPasajes.objects.get_or_create(usuario=request.user)
-        items = carro.items.select_related('asiento_servicio').all()
+        asientos_ids = request.data.get('asientos_ids')
+        items = carro.items.select_related('asiento_servicio')
+        if asientos_ids is not None:
+            if (
+                not isinstance(asientos_ids, list)
+                or not asientos_ids
+                or any(not str(asiento_id).isdigit() for asiento_id in asientos_ids)
+            ):
+                return Response(
+                    {"error": "'asientos_ids' debe ser una lista no vacía."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            ids_unicos = {int(asiento_id) for asiento_id in asientos_ids}
+            if len(ids_unicos) != len(asientos_ids):
+                return Response(
+                    {"error": "La lista de asientos contiene duplicados."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            items = items.filter(asiento_servicio_id__in=ids_unicos)
+            if items.count() != len(ids_unicos):
+                return Response(
+                    {"error": "Uno o más asientos seleccionados no están en tu carro."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        items = items.all()
 
         if not items.exists():
             return Response({"error": "El carro de pasajes está vacío."}, status=status.HTTP_400_BAD_REQUEST)
 
+        session_id = request.data.get('session_id')
+        asientos_por_id = {}
         for item in items:
             asiento = AsientoServicio.objects.select_for_update().get(id=item.asiento_servicio.id)
-            
-            if asiento.estado == AsientoServicio.EstadoAsientoChoices.OCUPADO:
+            if asiento.esta_bloqueado_o_comprado(current_session_id=session_id):
                 return Response(
-                    {"error": f"El asiento #{asiento.numero_asiento} del servicio {asiento.servicio.id} acaba de ser comprado por otro usuario."},
+                    {"error": f"El asiento #{asiento.numero_asiento} del servicio {asiento.servicio.id} ya no está disponible."},
                     status=status.HTTP_409_CONFLICT
                 )
+            if not item.nombre_ocupante.strip() or not item.identificacion_ocupante.strip():
+                return Response(
+                    {"error": f"Completa los datos del pasajero para el asiento #{asiento.numero_asiento} antes de pagar."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            asientos_por_id[item.asiento_servicio_id] = asiento
 
-        monto_total = sum(item.asiento_servicio.tarifa for item in items)
+        monto_total = sum(asientos_por_id[item.asiento_servicio_id].tarifa for item in items)
 
         venta = Venta.objects.create(
             usuario=request.user,
@@ -217,8 +260,10 @@ class CheckoutVentaView(APIView):
 
         boletos_creados = []
         for item in items:
-            asiento = item.asiento_servicio
+            asiento = asientos_por_id[item.asiento_servicio_id]
             asiento.estado = AsientoServicio.EstadoAsientoChoices.OCUPADO
+            asiento.bloqueado_hasta = None
+            asiento.session_id = None
             asiento.save()
 
             boleto = BoletoViaje.objects.create(
@@ -382,15 +427,16 @@ class InicioFooterView(APIView):
             else:
                 user = None
 
+            roles_validos = Usuario.RolChoices.values
             if user is not None:
-                if user.rol == rol_seleccionado or not rol_seleccionado:
+                if rol_seleccionado in roles_validos and user.rol == rol_seleccionado:
                     login(request, user)
                     if user.rol == Usuario.RolChoices.ADMIN_FLOTA:
                         return redirect('admin_flota')
                     else:
                         return redirect('/')
                 else:
-                    error = f"El usuario no coincide con el rol seleccionado ({rol_seleccionado})."
+                    error = "El usuario no coincide con el tipo de inicio de sesión seleccionado."
             else:
                 error = "Credenciales inválidas. Por favor, verifica el usuario y contraseña."
 
@@ -470,7 +516,34 @@ class BloquearAsientosTemporalView(APIView):
                     status=status.HTTP_404_NOT_FOUND
                 )
 
-            for asiento in asientos:
+            asientos_por_id = {asiento.id: asiento for asiento in asientos}
+            asientos_por_numero = {asiento.numero_asiento: asiento for asiento in asientos}
+            asientos_ordenados = []
+            for item in asientos_raw:
+                if isinstance(item, int) or (isinstance(item, str) and item.isdigit()):
+                    asiento = asientos_por_id.get(int(item))
+                elif isinstance(item, str) and item.startswith("virtual-"):
+                    try:
+                        asiento = asientos_por_numero.get(int(item.split("-")[1]))
+                    except (IndexError, ValueError):
+                        asiento = None
+                else:
+                    asiento = None
+                if asiento is not None:
+                    asientos_ordenados.append(asiento)
+
+            if len(asientos_ordenados) != len(asientos_raw):
+                return Response(
+                    {"error": "Uno o más asientos no existen."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            if len({asiento.id for asiento in asientos_ordenados}) != len(asientos_ordenados):
+                return Response(
+                    {"error": "La lista de asientos contiene duplicados."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            for asiento in asientos_ordenados:
                 if asiento.esta_bloqueado_o_comprado(current_session_id=session_id):
                     return Response(
                         {"error": f"El asiento #{asiento.numero_asiento} ya no está disponible."},
@@ -478,13 +551,13 @@ class BloquearAsientosTemporalView(APIView):
                     )
 
             expiracion = timezone.now() + timedelta(minutes=10)
-            for asiento in asientos:
+            for asiento in asientos_ordenados:
                 asiento.estado = AsientoServicio.EstadoAsientoChoices.RESERVADO_TEMPORAL
                 asiento.bloqueado_hasta = expiracion
                 asiento.session_id = session_id
                 asiento.save()
 
-            ids_reales_bloqueados = [a.id for a in asientos]
+            ids_reales_bloqueados = [a.id for a in asientos_ordenados]
 
         return Response({
             "mensaje": "Asientos bloqueados temporalmente por 10 minutos.",
